@@ -531,22 +531,13 @@ function injectGlobalStyles() {
   const style = document.createElement('style')
   style.id = PLUGIN_STYLE_ID
   style.textContent = `
-    :root[data-hermes-glass] [data-contrib-shell],
-    :root[data-hermes-glass] [data-slot='sidebar-wrapper'] {
+    .md-root,
+    .md-board-page,
+    .md-studio {
       background-color: var(--color-background) !important;
-    }
-    .md-root {
-      position: relative;
+      background: var(--color-background) !important;
+      opacity: 1 !important;
       isolation: isolate;
-      background-color: var(--color-background) !important;
-      background: var(--color-background) !important;
-      color: var(--color-foreground);
-      opacity: 1 !important;
-    }
-    .md-board-page {
-      background-color: var(--color-background) !important;
-      background: var(--color-background) !important;
-      opacity: 1 !important;
     }
     .md-root, .md-root * {
       color-scheme: dark;
@@ -596,7 +587,7 @@ function injectGlobalStyles() {
     }
 
     /* -------------------------------------------------------------------------
-     * Assistant Chat Dock styles aligned with dsh-media-desk
+     * Assistant Chat Dock styles aligned with Hermes Desktop Global CSS
      * ---------------------------------------------------------------------- */
     .md-chat {
       flex: 1;
@@ -607,7 +598,7 @@ function injectGlobalStyles() {
       height: 100%;
       background-color: var(--color-card);
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
+      border-radius: 4px;
       color: var(--color-foreground);
       overflow: hidden;
     }
@@ -618,7 +609,7 @@ function injectGlobalStyles() {
       gap: 8px;
       padding: 10px 14px;
       border-bottom: 1px solid var(--color-border);
-      background-color: color-mix(in srgb, var(--color-foreground) 2%, var(--color-card));
+      background-color: var(--color-card);
     }
     .md-dock-head h2 {
       font-size: 13.5px;
@@ -640,9 +631,9 @@ function injectGlobalStyles() {
       overflow: hidden;
       text-overflow: ellipsis;
       padding: 2px 7px;
-      border-radius: var(--radius-sm);
-      background: color-mix(in srgb, var(--color-foreground) 5%, transparent);
-      border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+      border-radius: 2.5px;
+      background: color-mix(in srgb, var(--color-foreground) 4%, var(--color-card));
+      border: 1px solid var(--color-border);
     }
     .md-engine i {
       flex: none;
@@ -672,15 +663,15 @@ function injectGlobalStyles() {
       text-align: left;
     }
     .md-dock-intro h3 {
-      font-size: 19px;
-      line-height: 26px;
-      font-weight: 400;
+      font-size: 18px;
+      line-height: 24px;
+      font-weight: 500;
       letter-spacing: -.01em;
       margin: 0 0 8px 0;
       color: var(--color-foreground);
     }
     .md-dock-intro p {
-      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      color: var(--color-muted-foreground);
       font-size: 12px;
       line-height: 18px;
       margin: 0;
@@ -696,9 +687,9 @@ function injectGlobalStyles() {
       align-self: flex-end;
       max-width: 86%;
       padding: 7px 12px;
-      border-radius: var(--radius-lg);
-      background-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 18%, var(--color-card)) !important;
-      border: 1px solid color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 45%, transparent) !important;
+      border-radius: 2.5px;
+      background-color: color-mix(in srgb, var(--color-primary) 14%, var(--color-card)) !important;
+      border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent) !important;
       color: var(--color-foreground) !important;
     }
     .md-msg.is-bot {
@@ -732,8 +723,8 @@ function injectGlobalStyles() {
       width: 100%;
       margin-top: 6px;
       padding: 6px 10px;
-      border-radius: var(--radius-md);
-      background-color: color-mix(in srgb, var(--color-foreground) 3%, var(--color-card));
+      border-radius: 2.5px;
+      background-color: var(--color-card);
       border: 1px solid var(--color-border);
       font-size: 11.5px;
       line-height: 17px;
@@ -793,13 +784,13 @@ function injectGlobalStyles() {
       display: block;
       width: 100%;
       padding: 5px 10px;
-      border-radius: var(--radius-md);
+      border-radius: 2.5px;
       border: 1px solid var(--color-border);
       background-color: var(--color-card);
-      color: var(--ui-text-secondary, var(--color-foreground));
+      color: var(--color-foreground);
       font-size: 11.5px;
       line-height: 17px;
-      transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+      transition: background-color .15s ease, border-color .15s ease;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
@@ -807,16 +798,16 @@ function injectGlobalStyles() {
       text-align: left;
     }
     .md-suggest button:hover:not(:disabled) {
-      background-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 12%, var(--color-card));
-      border-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 45%, var(--color-border));
+      background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-card));
+      border-color: var(--color-border);
       color: var(--color-foreground);
     }
     .md-composer {
       position: relative;
       margin: 0 12px 12px;
-      padding: 8px 10px;
-      border-radius: var(--radius-lg);
-      background-color: var(--color-card);
+      padding: 6px 10px;
+      border-radius: 2.5px;
+      background-color: var(--color-background);
       border: 1px solid var(--color-border);
       display: flex;
       align-items: flex-end;
@@ -825,7 +816,7 @@ function injectGlobalStyles() {
       transition: border-color .15s ease;
     }
     .md-composer:focus-within {
-      border-color: var(--theme-primary, var(--ui-accent, var(--ui-blue)));
+      border-color: var(--color-ring, var(--color-primary));
     }
     .md-composer textarea {
       flex: 1;
@@ -844,12 +835,12 @@ function injectGlobalStyles() {
     }
     .md-composer .md-send {
       flex: none;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      border-radius: 2.5px;
       border: none;
-      background-color: var(--theme-primary, var(--ui-accent, var(--ui-blue)));
-      color: var(--color-background);
+      background-color: var(--color-primary);
+      color: var(--color-primary-foreground);
       cursor: pointer;
       display: flex;
       align-items: center;

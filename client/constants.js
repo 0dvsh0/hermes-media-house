@@ -47,12 +47,12 @@ export const STATUS_DOT_COLORS = {
 export const CARD_STYLE = {
   backgroundColor: 'var(--color-card)',
   border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-lg)',
+  borderRadius: '4px',
 }
 
 export const HERO_GRADIENT = {
   background:
-    'linear-gradient(125deg, var(--color-background) 0%, color-mix(in srgb, var(--ui-purple) 7%, var(--color-background)) 55%, color-mix(in srgb, var(--ui-orange) 6%, var(--color-background)) 100%)',
+    'linear-gradient(125deg, var(--color-card) 0%, color-mix(in srgb, var(--ui-purple) 7%, var(--color-card)) 55%, color-mix(in srgb, var(--ui-orange) 6%, var(--color-card)) 100%)',
 }
 
 export const DOT_GRID = {
@@ -63,61 +63,62 @@ export const DOT_GRID = {
 }
 
 export const INPUT_STYLE = {
-  padding: '7px 12px',
-  borderRadius: 'var(--radius-md)',
+  padding: '6px 10px',
+  borderRadius: '2.5px',
   border: '1px solid var(--color-border)',
-  backgroundColor: 'color-mix(in srgb, var(--color-foreground) 4%, var(--color-background))',
+  backgroundColor: 'var(--color-background)',
   color: 'var(--color-foreground)',
-  fontSize: '13px',
+  fontSize: '12.5px',
   outline: 'none',
   minWidth: 0,
 }
 
 export const GHOST_BTN = {
-  padding: '6px 14px',
-  borderRadius: 'var(--radius-md)',
+  padding: '5px 12px',
+  borderRadius: '2.5px',
   border: '1px solid var(--color-border)',
   backgroundColor: 'var(--color-card)',
-  color: 'var(--ui-text-secondary)',
-  cursor: 'pointer',
-  fontSize: '12.5px',
-  fontWeight: 500,
-}
-
-export const PRIMARY_PILL = {
-  padding: '8px 16px',
-  borderRadius: 'var(--radius-md)',
-  border: 'none',
-  backgroundColor: 'var(--theme-primary, var(--ui-accent, var(--ui-blue)))',
-  color: 'var(--theme-primary-foreground, var(--color-primary-foreground, white))',
+  color: 'var(--color-foreground)',
   cursor: 'pointer',
   fontSize: '12px',
   fontWeight: 500,
 }
 
+export const PRIMARY_PILL = {
+  padding: '6px 14px',
+  borderRadius: '2.5px',
+  border: 'none',
+  backgroundColor: 'var(--color-primary)',
+  color: 'var(--color-primary-foreground)',
+  cursor: 'pointer',
+  fontSize: '12.5px',
+  fontWeight: 500,
+  transition: 'opacity 100ms ease',
+}
+
 export const SECONDARY_PILL = {
-  padding: '8px 14px',
-  borderRadius: 'var(--radius-md)',
+  padding: '5px 12px',
+  borderRadius: '2.5px',
   border: '1px solid var(--color-border)',
   backgroundColor: 'var(--color-card)',
-  color: 'var(--ui-text-secondary)',
+  color: 'var(--color-foreground)',
   cursor: 'pointer',
   fontSize: '12px',
   fontWeight: 500,
 }
 
 export const ICON_BTN = {
-  width: '30px',
-  height: '30px',
-  borderRadius: 'var(--radius-md)',
+  width: '28px',
+  height: '28px',
+  borderRadius: '2.5px',
   border: '1px solid var(--color-border)',
   backgroundColor: 'var(--color-card)',
-  color: 'var(--ui-text-secondary)',
+  color: 'var(--color-foreground)',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: '13px',
+  fontSize: '12px',
   flexShrink: 0,
 }
 

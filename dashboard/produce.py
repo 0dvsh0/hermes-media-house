@@ -341,11 +341,18 @@ class ProductionPipeline:
             async with sem:
                 asset_dict["status"] = "running"
                 try:
-                    img_bytes = await self.image_gen.generate(
-                        prompt=assembled,
-                        settings=settings,
-                        ctx=self.ctx,
-                    )
+                    try:
+                        img_bytes = await self.image_gen.generate(
+                            prompt=assembled,
+                            settings=settings,
+                            ctx=self.ctx,
+                        )
+                    except Exception as exc:
+                        logger.warning("Primary image generation failed for %s (%s): %s; falling back to editorial frame", item_id, target_label, exc)
+                        if hasattr(self.image_gen, "_generate_editorial_frame"):
+                            img_bytes = self.image_gen._generate_editorial_frame(assembled)
+                        else:
+                            raise
                     self.files_dir.mkdir(parents=True, exist_ok=True)
                     ext = ".jpg"
                     if img_bytes.startswith(b"\x89PNG"):

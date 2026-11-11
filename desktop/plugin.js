@@ -76,12 +76,12 @@ export const STATUS_DOT_COLORS = {
 export const CARD_STYLE = {
   backgroundColor: 'var(--color-card)',
   border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-lg)',
+  borderRadius: '4px',
 }
 
 export const HERO_GRADIENT = {
   background:
-    'linear-gradient(125deg, var(--color-background) 0%, color-mix(in srgb, var(--ui-purple) 7%, var(--color-background)) 55%, color-mix(in srgb, var(--ui-orange) 6%, var(--color-background)) 100%)',
+    'linear-gradient(125deg, var(--color-card) 0%, color-mix(in srgb, var(--ui-purple) 7%, var(--color-card)) 55%, color-mix(in srgb, var(--ui-orange) 6%, var(--color-card)) 100%)',
 }
 
 export const DOT_GRID = {
@@ -92,61 +92,62 @@ export const DOT_GRID = {
 }
 
 export const INPUT_STYLE = {
-  padding: '7px 12px',
-  borderRadius: 'var(--radius-md)',
+  padding: '6px 10px',
+  borderRadius: '2.5px',
   border: '1px solid var(--color-border)',
-  backgroundColor: 'color-mix(in srgb, var(--color-foreground) 4%, var(--color-background))',
+  backgroundColor: 'var(--color-background)',
   color: 'var(--color-foreground)',
-  fontSize: '13px',
+  fontSize: '12.5px',
   outline: 'none',
   minWidth: 0,
 }
 
 export const GHOST_BTN = {
-  padding: '6px 14px',
-  borderRadius: 'var(--radius-md)',
+  padding: '5px 12px',
+  borderRadius: '2.5px',
   border: '1px solid var(--color-border)',
   backgroundColor: 'var(--color-card)',
-  color: 'var(--ui-text-secondary)',
-  cursor: 'pointer',
-  fontSize: '12.5px',
-  fontWeight: 500,
-}
-
-export const PRIMARY_PILL = {
-  padding: '8px 16px',
-  borderRadius: 'var(--radius-md)',
-  border: 'none',
-  backgroundColor: 'var(--theme-primary, var(--ui-accent, var(--ui-blue)))',
-  color: 'var(--theme-primary-foreground, var(--color-primary-foreground, white))',
+  color: 'var(--color-foreground)',
   cursor: 'pointer',
   fontSize: '12px',
   fontWeight: 500,
 }
 
+export const PRIMARY_PILL = {
+  padding: '6px 14px',
+  borderRadius: '2.5px',
+  border: 'none',
+  backgroundColor: 'var(--color-primary)',
+  color: 'var(--color-primary-foreground)',
+  cursor: 'pointer',
+  fontSize: '12.5px',
+  fontWeight: 500,
+  transition: 'opacity 100ms ease',
+}
+
 export const SECONDARY_PILL = {
-  padding: '8px 14px',
-  borderRadius: 'var(--radius-md)',
+  padding: '5px 12px',
+  borderRadius: '2.5px',
   border: '1px solid var(--color-border)',
   backgroundColor: 'var(--color-card)',
-  color: 'var(--ui-text-secondary)',
+  color: 'var(--color-foreground)',
   cursor: 'pointer',
   fontSize: '12px',
   fontWeight: 500,
 }
 
 export const ICON_BTN = {
-  width: '30px',
-  height: '30px',
-  borderRadius: 'var(--radius-md)',
+  width: '28px',
+  height: '28px',
+  borderRadius: '2.5px',
   border: '1px solid var(--color-border)',
   backgroundColor: 'var(--color-card)',
-  color: 'var(--ui-text-secondary)',
+  color: 'var(--color-foreground)',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: '13px',
+  fontSize: '12px',
   flexShrink: 0,
 }
 
@@ -5806,17 +5807,18 @@ export function MonidPanel({ rest, t, onClose, dispatch }) {
 const STUDIO_TILE = {
   backgroundColor: 'var(--color-card)',
   border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-xl)',
+  borderRadius: '4px',
   boxShadow: 'var(--shadow-sm)',
+  opacity: 1,
 }
 
 const STUDIO_INPUT = {
-  padding: '8px 12px',
-  borderRadius: 'var(--radius-md)',
+  padding: '6px 10px',
+  borderRadius: '2.5px',
   border: '1px solid var(--color-border)',
-  backgroundColor: 'color-mix(in srgb, var(--color-foreground) 4%, var(--color-background))',
+  backgroundColor: 'var(--color-background)',
   color: 'var(--color-foreground)',
-  fontSize: '13px',
+  fontSize: '12.5px',
   outline: 'none',
   minWidth: 0,
 }
@@ -6184,7 +6186,9 @@ export function ProgressCard({ production, t }) {
     style: {
       backgroundColor: 'var(--color-card)',
       border: '1px solid var(--color-border)',
-      borderRadius: 'var(--radius-xl)',
+      borderRadius: '4px',
+      backgroundColor: 'var(--color-card)',
+      opacity: 1,
       padding: '14px',
       display: 'flex',
       flexDirection: 'column',
@@ -6260,7 +6264,9 @@ export function HeroTile({ production, onSelectAsset, t }) {
     style: {
       ...HERO_GRADIENT,
       border: '1px solid var(--color-border)',
-      borderRadius: 'var(--radius-xl)',
+      borderRadius: '4px',
+      backgroundColor: 'var(--color-card)',
+      opacity: 1,
       padding: '24px',
       minHeight: '220px',
       display: 'flex',
@@ -6338,9 +6344,9 @@ export function HeroTile({ production, onSelectAsset, t }) {
                   width: '290px',
                   height: '185px',
                   objectFit: 'cover',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '4px solid var(--color-card)',
-                  boxShadow: 'var(--shadow-lg)',
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-sm)',
                   transform: 'rotate(-2deg)',
                 },
               })
@@ -6351,9 +6357,9 @@ export function HeroTile({ production, onSelectAsset, t }) {
                   top: '10px',
                   width: '290px',
                   height: '185px',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '4px solid var(--color-card)',
-                  boxShadow: 'var(--shadow-lg)',
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-sm)',
                   transform: 'rotate(-2deg)',
                   background: THUMB_FALLBACK_GRADIENT,
                   display: 'flex',
@@ -6385,9 +6391,9 @@ export function HeroTile({ production, onSelectAsset, t }) {
               position: 'absolute',
               width: spot.w,
               height: spot.h,
-              borderRadius: 'var(--radius-lg)',
-              border: '3px solid var(--color-card)',
-              boxShadow: 'var(--shadow-md)',
+              borderRadius: '4px',
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-sm)',
               transform: `rotate(${spot.rot}deg)`,
               overflow: 'hidden',
               backgroundColor: 'var(--color-card)',
@@ -6467,9 +6473,10 @@ export function ArticleTile({ item, isExpanded, onToggleExpand, onAskSelection, 
       zIndex: isExpanded ? 150 : 1,
       transition: 'all 250ms ease-in-out',
       padding: '20px',
-      borderRadius: isExpanded ? 0 : 'var(--radius-xl)',
+      borderRadius: isExpanded ? 0 : '4px',
       border: '1px solid var(--color-border)',
       backgroundColor: 'var(--color-card)',
+      opacity: 1,
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
@@ -6509,21 +6516,17 @@ export function ArticleTile({ item, isExpanded, onToggleExpand, onAskSelection, 
                     },
                     style: {
                       padding: '4px 10px',
-                      borderRadius: 'var(--radius-md)',
+                      borderRadius: '2.5px',
                       border: 'none',
-                      backgroundColor: 'var(--theme-primary, var(--ui-accent, var(--ui-blue)))',
-                      color: 'var(--theme-primary-foreground, var(--color-primary-foreground, white))',
+                      backgroundColor: 'var(--color-primary)',
+                      color: 'var(--color-primary-foreground)',
                       cursor: 'pointer',
                       fontSize: '11.5px',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px',
                     },
-                    children: [
-                      jsx(Icon, { name: 'spark', size: 12 }),
-                      jsx('span', {}, t('studio.askAssistant')),
-                    ],
+                    children: jsx('span', {}, t('studio.askAssistant')),
                   })
                 : null,
               jsxs('button', {
@@ -6581,9 +6584,10 @@ export function ShotsTile({ production, isExpanded, onToggleExpand, onSelectAsse
       zIndex: isExpanded ? 150 : 1,
       transition: 'all 250ms ease-in-out',
       padding: '20px',
-      borderRadius: isExpanded ? 0 : 'var(--radius-xl)',
+      borderRadius: isExpanded ? 0 : '4px',
       border: '1px solid var(--color-border)',
       backgroundColor: 'var(--color-card)',
+      opacity: 1,
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
@@ -6680,11 +6684,11 @@ export function ShotsTile({ production, isExpanded, onToggleExpand, onSelectAsse
                       style: {
                         width: '100%',
                         height: '108px',
-                        borderRadius: 'var(--radius-lg)',
-                        backgroundColor:
-                          'color-mix(in srgb, var(--color-foreground) 4%, var(--color-background))',
-                        border: '1px solid color-mix(in srgb, var(--color-border) 60%, transparent)',
+                        borderRadius: '2.5px',
+                        backgroundColor: 'var(--color-card)',
+                        border: '1px solid var(--color-border)',
                         overflow: 'hidden',
+                        position: 'relative',
                       },
                       children: src
                         ? jsx(MediaImage, {
@@ -6698,13 +6702,19 @@ export function ShotsTile({ production, isExpanded, onToggleExpand, onSelectAsse
                               display: 'block',
                             },
                           })
-                        : jsx('span', {
+                        : jsx('div', {
                             style: {
-                              display: 'block',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
                               width: '100%',
                               height: '100%',
-                              background: THUMB_FALLBACK_GRADIENT,
+                              backgroundColor: 'color-mix(in srgb, var(--color-foreground) 4%, var(--color-card))',
+                              color: 'var(--color-muted-foreground)',
                             },
+                            children: sh.status === 'running' || sh.status === 'pending'
+                              ? jsx(Icon, { name: 'refresh', size: 16, spinning: true })
+                              : jsx(Icon, { name: 'image', size: 18, style: { opacity: 0.35 } }),
                           }),
                     }),
                     jsx('div', {
@@ -6851,13 +6861,15 @@ export function StudioOverlay({ itemId, onClose }) {
   const titleText = item.title || t('item.untitled')
 
   return jsxs('div', {
+    className: 'md-studio',
     'data-testid': 'studio-overlay',
     style: {
       position: 'absolute',
       inset: 0,
       width: '100%',
       height: '100%',
-      backgroundColor: 'var(--ui-bg-chrome, var(--color-background))',
+      backgroundColor: 'var(--color-background)',
+      opacity: 1,
       color: 'var(--color-foreground, var(--ui-text-primary, currentColor))',
       zIndex: 50,
       display: 'flex',
@@ -6874,7 +6886,8 @@ export function StudioOverlay({ itemId, onClose }) {
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          backgroundColor: 'var(--color-card, var(--ui-bg-chrome, white))',
+          backgroundColor: 'var(--color-card)',
+          opacity: 1,
         },
         children: [
           jsxs('div', {
@@ -6956,8 +6969,8 @@ export function StudioOverlay({ itemId, onClose }) {
                 style: {
                   backgroundColor: 'var(--color-card)',
                   border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-xl)',
-                  padding: '14px',
+                  borderRadius: '4px',
+                  padding: '12px',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '8px',
@@ -6969,13 +6982,12 @@ export function StudioOverlay({ itemId, onClose }) {
                         type: 'button',
                         onClick: handleCancel,
                         style: {
-                          ...PRIMARY_PILL,
+                          ...GHOST_BTN,
                           width: '100%',
+                          height: '32px',
                           boxSizing: 'border-box',
-                          backgroundColor: 'color-mix(in srgb, var(--ui-red) 14%, var(--color-background))',
                           color: 'var(--ui-red)',
-                          padding: '10px 16px',
-                          fontSize: '13px',
+                          borderColor: 'color-mix(in srgb, var(--ui-red) 40%, var(--color-border))',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -6992,9 +7004,8 @@ export function StudioOverlay({ itemId, onClose }) {
                         style: {
                           ...PRIMARY_PILL,
                           width: '100%',
+                          height: '32px',
                           boxSizing: 'border-box',
-                          padding: '10px 16px',
-                          fontSize: '13px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -7082,6 +7093,8 @@ export function StudioOverlay({ itemId, onClose }) {
           flexDirection: 'column',
           gap: '14px',
           boxSizing: 'border-box',
+          backgroundColor: 'var(--color-background)',
+          opacity: 1,
         },
         children: [
           pollError
@@ -8988,22 +9001,13 @@ function injectGlobalStyles() {
   const style = document.createElement('style')
   style.id = PLUGIN_STYLE_ID
   style.textContent = `
-    :root[data-hermes-glass] [data-contrib-shell],
-    :root[data-hermes-glass] [data-slot='sidebar-wrapper'] {
+    .md-root,
+    .md-board-page,
+    .md-studio {
       background-color: var(--color-background) !important;
-    }
-    .md-root {
-      position: relative;
+      background: var(--color-background) !important;
+      opacity: 1 !important;
       isolation: isolate;
-      background-color: var(--color-background) !important;
-      background: var(--color-background) !important;
-      color: var(--color-foreground);
-      opacity: 1 !important;
-    }
-    .md-board-page {
-      background-color: var(--color-background) !important;
-      background: var(--color-background) !important;
-      opacity: 1 !important;
     }
     .md-root, .md-root * {
       color-scheme: dark;
@@ -9053,7 +9057,7 @@ function injectGlobalStyles() {
     }
 
     /* -------------------------------------------------------------------------
-     * Assistant Chat Dock styles aligned with dsh-media-desk
+     * Assistant Chat Dock styles aligned with Hermes Desktop Global CSS
      * ---------------------------------------------------------------------- */
     .md-chat {
       flex: 1;
@@ -9064,7 +9068,7 @@ function injectGlobalStyles() {
       height: 100%;
       background-color: var(--color-card);
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
+      border-radius: 4px;
       color: var(--color-foreground);
       overflow: hidden;
     }
@@ -9075,7 +9079,7 @@ function injectGlobalStyles() {
       gap: 8px;
       padding: 10px 14px;
       border-bottom: 1px solid var(--color-border);
-      background-color: color-mix(in srgb, var(--color-foreground) 2%, var(--color-card));
+      background-color: var(--color-card);
     }
     .md-dock-head h2 {
       font-size: 13.5px;
@@ -9097,9 +9101,9 @@ function injectGlobalStyles() {
       overflow: hidden;
       text-overflow: ellipsis;
       padding: 2px 7px;
-      border-radius: var(--radius-sm);
-      background: color-mix(in srgb, var(--color-foreground) 5%, transparent);
-      border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+      border-radius: 2.5px;
+      background: color-mix(in srgb, var(--color-foreground) 4%, var(--color-card));
+      border: 1px solid var(--color-border);
     }
     .md-engine i {
       flex: none;
@@ -9129,15 +9133,15 @@ function injectGlobalStyles() {
       text-align: left;
     }
     .md-dock-intro h3 {
-      font-size: 19px;
-      line-height: 26px;
-      font-weight: 400;
+      font-size: 18px;
+      line-height: 24px;
+      font-weight: 500;
       letter-spacing: -.01em;
       margin: 0 0 8px 0;
       color: var(--color-foreground);
     }
     .md-dock-intro p {
-      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      color: var(--color-muted-foreground);
       font-size: 12px;
       line-height: 18px;
       margin: 0;
@@ -9153,9 +9157,9 @@ function injectGlobalStyles() {
       align-self: flex-end;
       max-width: 86%;
       padding: 7px 12px;
-      border-radius: var(--radius-lg);
-      background-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 18%, var(--color-card)) !important;
-      border: 1px solid color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 45%, transparent) !important;
+      border-radius: 2.5px;
+      background-color: color-mix(in srgb, var(--color-primary) 14%, var(--color-card)) !important;
+      border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent) !important;
       color: var(--color-foreground) !important;
     }
     .md-msg.is-bot {
@@ -9189,8 +9193,8 @@ function injectGlobalStyles() {
       width: 100%;
       margin-top: 6px;
       padding: 6px 10px;
-      border-radius: var(--radius-md);
-      background-color: color-mix(in srgb, var(--color-foreground) 3%, var(--color-card));
+      border-radius: 2.5px;
+      background-color: var(--color-card);
       border: 1px solid var(--color-border);
       font-size: 11.5px;
       line-height: 17px;
@@ -9250,13 +9254,13 @@ function injectGlobalStyles() {
       display: block;
       width: 100%;
       padding: 5px 10px;
-      border-radius: var(--radius-md);
+      border-radius: 2.5px;
       border: 1px solid var(--color-border);
       background-color: var(--color-card);
-      color: var(--ui-text-secondary, var(--color-foreground));
+      color: var(--color-foreground);
       font-size: 11.5px;
       line-height: 17px;
-      transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+      transition: background-color .15s ease, border-color .15s ease;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
@@ -9264,16 +9268,16 @@ function injectGlobalStyles() {
       text-align: left;
     }
     .md-suggest button:hover:not(:disabled) {
-      background-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 12%, var(--color-card));
-      border-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 45%, var(--color-border));
+      background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-card));
+      border-color: var(--color-border);
       color: var(--color-foreground);
     }
     .md-composer {
       position: relative;
       margin: 0 12px 12px;
-      padding: 8px 10px;
-      border-radius: var(--radius-lg);
-      background-color: var(--color-card);
+      padding: 6px 10px;
+      border-radius: 2.5px;
+      background-color: var(--color-background);
       border: 1px solid var(--color-border);
       display: flex;
       align-items: flex-end;
@@ -9282,7 +9286,7 @@ function injectGlobalStyles() {
       transition: border-color .15s ease;
     }
     .md-composer:focus-within {
-      border-color: var(--theme-primary, var(--ui-accent, var(--ui-blue)));
+      border-color: var(--color-ring, var(--color-primary));
     }
     .md-composer textarea {
       flex: 1;
@@ -9301,12 +9305,12 @@ function injectGlobalStyles() {
     }
     .md-composer .md-send {
       flex: none;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      border-radius: 2.5px;
       border: none;
-      background-color: var(--theme-primary, var(--ui-accent, var(--ui-blue)));
-      color: var(--color-background);
+      background-color: var(--color-primary);
+      color: var(--color-primary-foreground);
       cursor: pointer;
       display: flex;
       align-items: center;

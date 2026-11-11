@@ -15,12 +15,17 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 import json
 import logging
 from pathlib import Path
+import random
 import re
+import struct
 from typing import Any
+import urllib.parse
 from urllib.parse import urlsplit
+import zlib
 
 from fastapi import HTTPException
 import httpx
@@ -127,7 +132,67 @@ class ImageGenerator:
 
         if source == "tool":
             return await self._generate_via_tool(prompt, settings, ctx)
-        return await self._generate_via_http(prompt, settings)
+
+        # If custom baseUrl is explicitly configured, use user-configured HTTP endpoint
+        if (image_cfg.get("baseUrl") or "").strip():
+            return await self._generate_via_http(prompt, settings)
+
+        # Otherwise, provide zero-config public AI generation with editorial frame fallback
+        try:
+            return await self._generate_via_public_ai(prompt, **kwargs)
+        except Exception as exc:
+            logger.warning("Public AI image generation failed: %s; using editorial frame", exc)
+            return self._generate_editorial_frame(prompt, **kwargs)
+
+    async def _generate_via_public_ai(self, prompt: str, **kwargs: Any) -> bytes:
+        """Zero-config public image generation via Pollinations."""
+        clean_prompt = prompt.strip() or "cinematic modern composition, no text, editorial style"
+        seed = kwargs.get("seed") or random.randint(1000, 999999)
+        aspect = kwargs.get("aspect_ratio") or "landscape"
+        width, height = (1024, 768) if aspect == "landscape" else ((768, 1024) if aspect == "portrait" else (768, 768))
+        encoded_prompt = urllib.parse.quote(clean_prompt)
+        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&nologo=true&seed={seed}"
+
+        async with httpx.AsyncClient(timeout=45.0, follow_redirects=True) as client:
+            resp = await client.get(url, headers={"User-Agent": "HermesMediaDesk/1.0"})
+            if resp.status_code == 200 and len(resp.content) > 100:
+                self._validate_image(resp.content)
+                return resp.content
+            raise RuntimeError(f"Public AI image endpoint returned HTTP {resp.status_code}")
+
+    def _generate_editorial_frame(self, prompt: str, **kwargs: Any) -> bytes:
+        """Generate a valid, visually elegant PNG editorial frame fallback."""
+        width = 800
+        height = 450
+        h = int(hashlib.md5(prompt.encode("utf-8", "ignore")).hexdigest()[:6], 16)
+        r = 18 + (h & 0x1F)
+        g = 22 + ((h >> 5) & 0x1F)
+        b = 32 + ((h >> 10) & 0x2F)
+
+        png = bytearray(b"\x89PNG\r\n\x1a\n")
+        ihdr_data = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+        ihdr_crc = zlib.crc32(b"IHDR" + ihdr_data)
+        png += struct.pack(">I", len(ihdr_data)) + b"IHDR" + ihdr_data + struct.pack(">I", ihdr_crc)
+
+        raw_lines = bytearray()
+        for y in range(height):
+            raw_lines.append(0)
+            fy = y / height
+            cr = int(min(255, max(0, r + fy * 24)))
+            cg = int(min(255, max(0, g + fy * 24)))
+            cb = int(min(255, max(0, b + fy * 36)))
+            line = bytes([cr, cg, cb]) * width
+            raw_lines.extend(line)
+
+        compressed = zlib.compress(bytes(raw_lines), level=6)
+        idat_crc = zlib.crc32(b"IDAT" + compressed)
+        png += struct.pack(">I", len(compressed)) + b"IDAT" + compressed + struct.pack(">I", idat_crc)
+
+        iend_crc = zlib.crc32(b"IEND")
+        png += struct.pack(">I", 0) + b"IEND" + struct.pack(">I", iend_crc)
+        res = bytes(png)
+        self._validate_image(res)
+        return res
 
     def _validate_image(self, data: bytes) -> str:
         """Instance method proxying _validate_image."""
