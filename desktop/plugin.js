@@ -6998,12 +6998,8 @@ export function StudioOverlay({ itemId, onClose }) {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '6px',
                         },
-                        children: [
-                          jsx(Icon, { name: 'spark', size: 14 }),
-                          jsx('span', {}, t('studio.produce')),
-                        ],
+                        children: jsx('span', {}, t('studio.produce')),
                       }),
                   jsxs('div', {
                     style: { display: 'flex', gap: '8px' },
@@ -7185,7 +7181,8 @@ export function StudioOverlay({ itemId, onClose }) {
 // ---------------------------------------------------------------------------
 /**
  * Assistant Chat Dock Component
- * Contextual chat panel with receipts, undo, and model status
+ * Fully aligned with dsh-media-desk UI/UX and Hermes theme design tokens.
+ * Provides real LLM responses, receipts, model status indicator, and reversible ops.
  */
 
 
@@ -7193,30 +7190,119 @@ export function StudioOverlay({ itemId, onClose }) {
 
 
 
+const GENERAL_SUGGESTIONS = [
+  'Note: "Slow down, it still counts as arriving" can be the opening',
+  'What is on the upcoming schedule?',
+  'Keep future titles under 20 words',
+  "Turn today's best inspiration into a draft",
+]
 
-// 10. Chat Dock (Task 24, Requirements 10.1-10.12)
-// ---------------------------------------------------------------------------
+const STUDIO_SUGGESTIONS = [
+  'Make title shorter',
+  'Make tone lighter',
+  'Write a stronger opening hook',
+  'Create bolder cover text',
+]
 
-const QUICK_ACTIONS = ['studio.shorterTitle', 'studio.lighterTone', 'studio.strongerOpening', 'studio.bolderCover']
+function Receipt({ receipt, onOpenItem }) {
+  const clickable = receipt.kind === 'item' && receipt.target
+  const Tag = clickable ? 'button' : 'div'
+  return jsx(Tag, {
+    type: clickable ? 'button' : undefined,
+    className: 'md-receipt',
+    onClick: clickable && onOpenItem ? () => onOpenItem(receipt.target) : undefined,
+    children: [
+      jsx('span', {
+        className: 'md-receipt-check',
+        children: jsx(Icon, { name: 'check', size: 10, stroke: 2.2 }),
+      }),
+      jsx('span', {}, receipt.text),
+    ],
+  })
+}
+
+function Message({ message, canUndoThis, onUndo, onOpenItem }) {
+  const isUser = message.role === 'user'
+  if (isUser) {
+    return jsx('div', {
+      className: 'md-msg is-user',
+      children: message.text || message.content,
+    })
+  }
+
+  const receipts = Array.isArray(message.receipts) ? message.receipts : []
+  const errors = Array.isArray(message.errors) ? message.errors : []
+
+  return jsxs('div', {
+    className: 'md-msg is-bot',
+    children: [
+      jsx('p', {}, message.text || message.content),
+      receipts.map((r, idx) => jsx(Receipt, { key: `rcpt-${idx}`, receipt: r, onOpenItem })),
+      errors.map((err, idx) => jsx('p', { key: `err-${idx}`, className: 'md-msg-error' }, err)),
+      message.notice ? jsx('p', { className: 'md-msg-note' }, message.notice) : null,
+      jsxs('footer', {
+        children: [
+          jsx('span', {}, message.engine === 'local' ? 'Local Rules' : ''),
+          canUndoThis
+            ? jsxs('button', {
+                type: 'button',
+                onClick: onUndo,
+                children: [
+                  jsx(Icon, { name: 'undo', size: 11 }),
+                  jsx('span', {}, 'Undo'),
+                ],
+              })
+            : null,
+        ],
+      }),
+    ],
+  })
+}
+
+function ModelAlert({ model, error }) {
+  if (!error) return null
+  return jsxs('div', {
+    className: 'md-model-alert',
+    role: 'status',
+    children: [
+      jsx('strong', {}, `Model ${model || 'LLM'} call failed`),
+      jsx('p', {}, error.length > 280 ? `${error.slice(0, 280)}...` : error),
+    ],
+  })
+}
 
 export function ChatDock({ itemId, onClose, initialInput, onClearSeed }) {
   const { state, dispatch, rest, t } = useContext(AppContext)
   const [inputMsg, setInputMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const [chatError, setChatError] = useState('')
-  const [outageNotice, setOutageNotice] = useState('')
+  const [model, setModel] = useState('stepfun/step-3.7-flash:free')
+  const [modelOk, setModelOk] = useState(true)
+  const [modelError, setModelError] = useState(null)
   const scrollRef = useRef(null)
+  const textareaRef = useRef(null)
 
   const focusId = itemId || state.openItemId
   const allChat = (state.serverState && state.serverState.chat) || []
 
-  // Scoped to focusId and limited to last 8 messages (Requirements 10.12, 24).
+  // Scoped to focusId and limited to last 30 messages
   const scopedChat = useMemo(() => {
     const list = focusId ? allChat.filter(m => m.itemId === focusId) : allChat
-    return list.slice(-8)
+    return list.slice(-30)
   }, [allChat, focusId])
 
-  // Adopt selection seeds handed down from the Studio tiles.
+  // Fetch initial model metadata on mount
+  useEffect(() => {
+    rest('/models')
+      .then(res => {
+        if (res && res.default) {
+          setModel(res.default)
+        }
+      })
+      .catch(() => {})
+  }, [rest])
+
+  // Adopt selection seeds handed down from the Studio tiles
   useEffect(() => {
     if (initialInput) {
       setInputMsg(initialInput)
@@ -7224,32 +7310,56 @@ export function ChatDock({ itemId, onClose, initialInput, onClearSeed }) {
     }
   }, [initialInput, onClearSeed])
 
+  // Scroll to bottom on new messages
   useEffect(() => {
     const el = scrollRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [scopedChat.length])
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    }
+  }, [scopedChat.length, loading])
+
+  // Auto-resize composer textarea
+  useLayoutEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+  }, [inputMsg])
 
   const handleSend = raw => {
     const msg = (typeof raw === 'string' ? raw : inputMsg).trim()
     if (!msg || loading) return
     setLoading(true)
     setChatError('')
-    setOutageNotice('')
     setInputMsg('')
+
     rest('/chat', {
       method: 'POST',
       body: JSON.stringify({ message: msg, focusId }),
     })
       .then(res => {
         setLoading(false)
-        if (res && res.state) dispatch({ type: 'SET_STATE', payload: res.state })
-        if (res && res.modelOk === false && res.modelError) {
-          setOutageNotice(res.modelError)
+        if (res && res.state) {
+          dispatch({ type: 'SET_STATE', payload: res.state })
+        }
+        if (res && res.model) {
+          setModel(res.model)
+        }
+        if (res && typeof res.modelOk === 'boolean') {
+          setModelOk(res.modelOk)
+        }
+        if (res && res.modelError) {
+          setModelError(res.modelError)
+        } else if (res && res.modelOk) {
+          setModelError(null)
         }
       })
       .catch(err => {
         setLoading(false)
-        setChatError(err.message || String(err))
+        const errMsg = err.message || String(err)
+        setChatError(errMsg)
+        setModelOk(false)
+        setModelError(errMsg)
       })
   }
 
@@ -7273,268 +7383,164 @@ export function ChatDock({ itemId, onClose, initialInput, onClearSeed }) {
       })
   }
 
-  const dockBtn = {
-    padding: '3px 8px',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--color-border)',
-    backgroundColor: 'var(--color-card)',
-    color: 'var(--ui-text-tertiary)',
-    cursor: 'pointer',
-    fontSize: '11px',
-    fontWeight: 500,
-    whiteSpace: 'nowrap',
+  const handleOpenItem = targetId => {
+    if (targetId) {
+      dispatch({ type: 'OPEN_STUDIO', payload: targetId })
+    }
   }
 
+  const lastBot = [...scopedChat].reverse().find(m => m.role === 'assistant')
+  const suggestions = focusId ? STUDIO_SUGGESTIONS : GENERAL_SUGGESTIONS
+
   return jsxs('div', {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100%',
-      height: '100%',
-      boxSizing: 'border-box',
-      backgroundColor: 'var(--color-card)',
-      border: '1px solid var(--color-border)',
-      borderRadius: 'var(--radius-xl)',
-      color: 'var(--color-foreground)',
-      overflow: 'hidden',
-    },
+    className: 'md-chat',
     children: [
-      jsxs('div', {
-        style: {
-          padding: '10px 12px',
-          borderBottom: '1px solid var(--color-border)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexShrink: 0,
-        },
+      // Dock Header
+      jsxs('header', {
+        className: 'md-dock-head',
         children: [
-          jsx('span', {
-            style: { fontWeight: 600, fontSize: '12.5px' },
-            children: t('chat.title'),
-          }),
-          jsxs('button', {
-            type: 'button',
-            onClick: handleClear,
-            style: { ...dockBtn, display: 'inline-flex', alignItems: 'center', gap: '4px' },
-            children: [
-              jsx(Icon, { name: 'trash', size: 12 }),
-              jsx('span', {}, t('chat.clear')),
-            ],
-          }),
+          jsx('h2', {}, t('chat.title') || 'Assistant'),
+          jsx(
+            'span',
+            {
+              className: `md-engine ${modelOk === false ? 'is-down' : 'is-live'}`,
+              title:
+                modelOk === false
+                  ? `Model call failed: ${modelError || 'Error'}`
+                  : `Active Hermes Model: ${model}`,
+            },
+            [
+              jsx('i', { key: 'engine-dot' }),
+              jsx('span', { key: 'engine-name' }, modelOk === false ? 'Model Error' : model),
+            ]
+          ),
+          jsx('span', { style: { flex: 1 } }),
+          scopedChat.length > 0
+            ? jsx(IconButton, {
+                icon: 'trash',
+                label: t('chat.clear') || 'Clear Chat',
+                onClick: handleClear,
+              })
+            : null,
+          onClose
+            ? jsx(IconButton, {
+                icon: 'close',
+                label: t('common.close') || 'Close',
+                onClick: onClose,
+              })
+            : null,
         ],
       }),
-      onClose
-        ? jsx('div', {
-            style: { display: 'flex', justifyContent: 'flex-end', padding: '4px 8px 0' },
-            children: jsx('button', {
-              type: 'button',
-              onClick: onClose,
-              'aria-label': t('common.cancel'),
-              style: {
-                border: 'none',
-                background: 'none',
-                color: 'var(--ui-text-quaternary)',
-                cursor: 'pointer',
-                padding: '2px',
-                display: 'inline-flex',
-                alignItems: 'center',
-              },
-              children: jsx(Icon, { name: 'close', size: 13 }),
-            }),
-          })
-        : null,
-      outageNotice
-        ? jsx('div', {
-            style: {
-              margin: '8px 12px 0',
-              padding: '6px 10px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor:
-                'color-mix(in srgb, var(--ui-orange) 10%, var(--color-background))',
-              color: 'var(--ui-text-secondary)',
-              fontSize: '11.5px',
-            },
-            children: `${t('chat.outage')}: ${outageNotice}`,
-          })
-        : null,
-      chatError
-        ? jsx('div', {
-            style: {
-              margin: '8px 12px 0',
-              padding: '6px 10px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'color-mix(in srgb, var(--ui-red) 10%, var(--color-background))',
-              color: 'var(--ui-red)',
-              fontSize: '11.5px',
-            },
-            children: chatError,
-          })
-        : null,
-      jsx('div', {
-        ref: scrollRef,
-        style: {
-          flex: 1,
-          overflowY: 'auto',
-          padding: '12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          minHeight: 0,
-        },
-        children:
-          scopedChat.length === 0
-            ? jsx('div', {
-                style: {
-                  textAlign: 'center',
-                  color: 'var(--ui-text-quaternary)',
-                  fontSize: '12px',
-                  marginTop: '24px',
-                },
-                children: t('chat.empty'),
-              })
-            : scopedChat.map((m, idx) => {
-                const isUser = m.role === 'user'
-                return jsxs(
-                  'div',
-                  {
-                    style: {
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isUser ? 'flex-end' : 'flex-start',
-                      gap: '2px',
-                      maxWidth: '100%',
-                    },
-                    children: [
-                      jsx('div', {
-                        style: {
-                          maxWidth: '88%',
-                          padding: '7px 11px',
-                          borderRadius: 'var(--radius-lg)',
-                          backgroundColor: isUser
-                            ? 'var(--color-foreground)'
-                            : 'color-mix(in srgb, var(--color-foreground) 5%, var(--color-background))',
-                          border: isUser
-                            ? 'none'
-                            : '1px solid color-mix(in srgb, var(--color-border) 60%, transparent)',
-                          color: isUser ? 'var(--color-background)' : 'var(--color-foreground)',
-                          fontSize: '12.5px',
-                          lineHeight: 1.5,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                        },
-                        children: m.content,
-                      }),
-                      !isUser && m.undoable
-                        ? jsxs('button', {
-                            type: 'button',
-                            onClick: handleUndo,
-                            style: { ...dockBtn, marginTop: '2px', display: 'inline-flex', alignItems: 'center', gap: '4px' },
-                            children: [
-                              jsx(Icon, { name: 'undo', size: 11 }),
-                              jsx('span', {}, t('chat.undo')),
-                            ],
-                          })
-                        : null,
-                    ],
-                  },
-                  `chat-msg-${idx}`
-                )
-              }),
-      }),
-      // Quick edit suggestions (studio context only).
-      focusId
-        ? jsx('div', {
-            style: {
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: '2px',
-              padding: '0 12px',
-              flexShrink: 0,
-            },
-            children: QUICK_ACTIONS.map(key =>
-              jsx(
-                'button',
-                {
-                  key,
-                  type: 'button',
-                  onClick: () => handleSend(t(key)),
-                  style: {
-                    border: 'none',
-                    background: 'none',
-                    color: 'var(--ui-text-quaternary)',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    padding: '2px 0',
-                    textAlign: 'left',
-                  },
-                  children: t(key),
-                },
-                key
-              )
-            ),
-          })
-        : null,
+
+      // Scrollable Message History
       jsxs('div', {
-        style: {
-          padding: '10px 12px',
-          borderTop: '1px solid var(--color-border)',
-          display: 'flex',
-          gap: '8px',
-          alignItems: 'center',
-          flexShrink: 0,
+        ref: scrollRef,
+        className: 'md-dock-scroll',
+        'aria-live': 'polite',
+        children: [
+          modelOk === false && modelError
+            ? jsx(ModelAlert, { model, error: modelError })
+            : null,
+          chatError
+            ? jsx('div', { className: 'md-msg-error' }, chatError)
+            : null,
+          scopedChat.length === 0
+            ? jsxs('div', {
+                className: 'md-dock-intro',
+                children: [
+                  jsxs('h3', {
+                    children: [
+                      'Say one thing,',
+                      jsx('br', {}),
+                      "I'll fill in the rest.",
+                    ],
+                  }),
+                  jsx(
+                    'p',
+                    {},
+                    'Topics, ideas, content, schedule, style, and writing rules can all be instructed directly. Every step can be undone.'
+                  ),
+                ],
+              })
+            : scopedChat.map((msg, idx) =>
+                jsx(
+                  Message,
+                  {
+                    message: msg,
+                    canUndoThis: msg === lastBot && Boolean(msg.undoable),
+                    onUndo: handleUndo,
+                    onOpenItem: handleOpenItem,
+                  },
+                  msg.id || `msg-${idx}`
+                )
+              ),
+          loading
+            ? jsx('div', {
+                className: 'md-msg is-bot',
+                children: jsx('span', { className: 'md-shimmer' }, 'Thinking and writing with Hermes...'),
+              })
+            : null,
+        ],
+      }),
+
+      // Suggestion Chips
+      jsx('div', {
+        className: 'md-suggest',
+        children: suggestions.slice(0, scopedChat.length ? 2 : 4).map(text =>
+          jsx(
+            'button',
+            {
+              key: text,
+              type: 'button',
+              onClick: () => handleSend(text),
+              disabled: loading,
+            },
+            text
+          )
+        ),
+      }),
+
+      // Composer Area
+      jsxs('form', {
+        className: 'md-composer',
+        onSubmit: e => {
+          e.preventDefault()
+          handleSend()
         },
         children: [
-          jsx('input', {
-            type: 'text',
-            placeholder: t('chat.placeholder'),
+          jsx('textarea', {
+            ref: textareaRef,
+            rows: 1,
+            'aria-label': 'Message the Assistant',
+            placeholder: focusId
+              ? 'Refine title, tone, hook, or content...'
+              : 'Instruct anything, or ask to revise...',
             value: inputMsg,
+            disabled: loading,
             onChange: e => setInputMsg(e.target.value),
             onKeyDown: e => {
-              if (e.key === 'Enter') handleSend()
-            },
-            style: {
-              flex: 1,
-              minWidth: 0,
-              padding: '7px 11px',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              backgroundColor: 'color-mix(in srgb, var(--color-foreground) 4%, var(--color-background))',
-              color: 'var(--color-foreground)',
-              fontSize: '12.5px',
-              outline: 'none',
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
             },
           }),
           jsx('button', {
-            type: 'button',
-            onClick: () => handleSend(),
-            disabled: loading || !inputMsg.trim(),
-            style: {
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              border: 'none',
-              backgroundColor:
-                loading || !inputMsg.trim() ? 'var(--color-border)' : 'var(--color-foreground)',
-              color: 'var(--color-background)',
-              cursor: loading || !inputMsg.trim() ? 'default' : 'pointer',
-              fontWeight: 700,
-              fontSize: '13px',
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            },
-            children: jsx(Icon, { name: loading ? 'refresh' : 'send', size: 13, spinning: loading }),
+            type: 'submit',
+            className: 'md-send',
+            'aria-label': 'Send',
+            disabled: !inputMsg.trim() || loading,
+            children: jsx(Icon, {
+              name: loading ? 'refresh' : 'send',
+              size: 13,
+              spinning: loading,
+            }),
           }),
         ],
       }),
     ],
   })
 }
-
-// ---------------------------------------------------------------------------
 
 
 // ---------------------------------------------------------------------------
@@ -9044,6 +9050,301 @@ function injectGlobalStyles() {
     .md-node.is-selected .md-card {
       transform: none;
       box-shadow: 0 0 0 1.5px var(--color-foreground), var(--shadow-md);
+    }
+
+    /* -------------------------------------------------------------------------
+     * Assistant Chat Dock styles aligned with dsh-media-desk
+     * ---------------------------------------------------------------------- */
+    .md-chat {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background-color: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      color: var(--color-foreground);
+      overflow: hidden;
+    }
+    .md-dock-head {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--color-border);
+      background-color: color-mix(in srgb, var(--color-foreground) 2%, var(--color-card));
+    }
+    .md-dock-head h2 {
+      font-size: 13.5px;
+      line-height: 20px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--color-foreground);
+    }
+    .md-engine {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 155px;
+      min-width: 0;
+      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      font-size: 11px;
+      line-height: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--color-foreground) 5%, transparent);
+      border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+    }
+    .md-engine i {
+      flex: none;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--ui-text-quaternary, var(--color-muted));
+    }
+    .md-engine.is-live i {
+      background: var(--ui-green);
+    }
+    .md-engine.is-down i {
+      background: var(--ui-orange);
+    }
+    .md-dock-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .md-dock-intro {
+      margin: auto 0;
+      padding: 20px 8px 12px;
+      text-align: left;
+    }
+    .md-dock-intro h3 {
+      font-size: 19px;
+      line-height: 26px;
+      font-weight: 400;
+      letter-spacing: -.01em;
+      margin: 0 0 8px 0;
+      color: var(--color-foreground);
+    }
+    .md-dock-intro p {
+      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      font-size: 12px;
+      line-height: 18px;
+      margin: 0;
+    }
+    .md-msg {
+      font-size: 12.5px;
+      line-height: 19px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .md-msg.is-user {
+      align-self: flex-end;
+      max-width: 86%;
+      padding: 7px 12px;
+      border-radius: var(--radius-lg);
+      background-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 18%, var(--color-card)) !important;
+      border: 1px solid color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 45%, transparent) !important;
+      color: var(--color-foreground) !important;
+    }
+    .md-msg.is-bot {
+      align-self: flex-start;
+      max-width: 98%;
+      width: 100%;
+      padding: 2px 0;
+    }
+    .md-msg.is-bot p {
+      margin: 0;
+      color: var(--color-foreground);
+    }
+    .md-msg.is-bot p + p {
+      margin-top: 6px;
+    }
+    .md-msg-error {
+      color: var(--ui-red) !important;
+      font-size: 11.5px;
+      margin-top: 4px;
+    }
+    .md-msg-note {
+      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      font-size: 11.5px;
+      line-height: 16px;
+      margin-top: 4px;
+    }
+    .md-receipt {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      width: 100%;
+      margin-top: 6px;
+      padding: 6px 10px;
+      border-radius: var(--radius-md);
+      background-color: color-mix(in srgb, var(--color-foreground) 3%, var(--color-card));
+      border: 1px solid var(--color-border);
+      font-size: 11.5px;
+      line-height: 17px;
+      color: var(--color-foreground);
+      text-align: left;
+    }
+    button.md-receipt {
+      cursor: pointer;
+      transition: transform .15s ease, background-color .15s ease;
+    }
+    button.md-receipt:hover {
+      transform: translateX(2px);
+      background-color: color-mix(in srgb, var(--color-foreground) 6%, var(--color-card));
+    }
+    .md-receipt-check {
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 15px;
+      height: 15px;
+      margin-top: 1px;
+      border-radius: 50%;
+      background-color: var(--ui-green);
+      color: var(--color-background);
+    }
+    .md-msg footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 5px;
+      color: var(--ui-text-quaternary, var(--color-muted-foreground));
+      font-size: 11px;
+    }
+    .md-msg footer button {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: none;
+      border: none;
+      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      cursor: pointer;
+      padding: 0;
+      font-size: 11px;
+    }
+    .md-msg footer button:hover {
+      color: var(--color-foreground);
+    }
+    .md-suggest {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 0 12px 8px;
+      flex-shrink: 0;
+    }
+    .md-suggest button {
+      display: block;
+      width: 100%;
+      padding: 5px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background-color: var(--color-card);
+      color: var(--ui-text-secondary, var(--color-foreground));
+      font-size: 11.5px;
+      line-height: 17px;
+      transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      text-align: left;
+    }
+    .md-suggest button:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 12%, var(--color-card));
+      border-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 45%, var(--color-border));
+      color: var(--color-foreground);
+    }
+    .md-composer {
+      position: relative;
+      margin: 0 12px 12px;
+      padding: 8px 10px;
+      border-radius: var(--radius-lg);
+      background-color: var(--color-card);
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+      transition: border-color .15s ease;
+    }
+    .md-composer:focus-within {
+      border-color: var(--theme-primary, var(--ui-accent, var(--ui-blue)));
+    }
+    .md-composer textarea {
+      flex: 1;
+      min-width: 0;
+      min-height: 22px;
+      max-height: 110px;
+      padding: 2px 0;
+      border: 0;
+      outline: 0;
+      background: none;
+      resize: none;
+      font-size: 12.5px;
+      line-height: 18px;
+      color: var(--color-foreground);
+      font-family: inherit;
+    }
+    .md-composer .md-send {
+      flex: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background-color: var(--theme-primary, var(--ui-accent, var(--ui-blue)));
+      color: var(--color-background);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity .15s ease;
+    }
+    .md-composer .md-send:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+    .md-model-alert {
+      margin-bottom: 8px;
+      padding: 8px 11px;
+      border-radius: var(--radius-md);
+      background-color: color-mix(in srgb, var(--ui-orange) 14%, var(--color-card));
+      border: 1px solid color-mix(in srgb, var(--ui-orange) 35%, transparent);
+      font-size: 11.5px;
+      line-height: 17px;
+      color: var(--color-foreground);
+    }
+    .md-model-alert strong {
+      display: block;
+      font-weight: 600;
+      color: var(--ui-orange);
+    }
+    .md-model-alert p {
+      margin: 3px 0 0 0;
+      color: var(--ui-text-secondary, var(--color-foreground));
+      overflow-wrap: anywhere;
+    }
+    .md-shimmer {
+      display: inline-block;
+      opacity: 0.7;
+      animation: md-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes md-pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
     }
   `
   document.head.appendChild(style)

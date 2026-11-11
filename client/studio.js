@@ -1216,12 +1216,8 @@ export function StudioOverlay({ itemId, onClose }) {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '6px',
                         },
-                        children: [
-                          jsx(Icon, { name: 'spark', size: 14 }),
-                          jsx('span', {}, t('studio.produce')),
-                        ],
+                        children: jsx('span', {}, t('studio.produce')),
                       }),
                   jsxs('div', {
                     style: { display: 'flex', gap: '8px' },

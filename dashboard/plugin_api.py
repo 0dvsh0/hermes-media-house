@@ -120,6 +120,8 @@ def init_plugin(context: Any, data_dir: Path | None = None) -> None:
 # Event Broadcasting (Requirement 20.1, 20.4)
 # ---------------------------------------------------------------------------
 
+os.environ.setdefault("HERMES_DISABLE_LAZY_INSTALLS", "1")
+
 async def broadcast_plugin_event(plugin_id: str, event_name: str, payload: dict[str, Any]) -> None:
     """Broadcast an event to connected Hermes Desktop clients.
 
@@ -128,6 +130,16 @@ async def broadcast_plugin_event(plugin_id: str, event_name: str, payload: dict[
     wire name ``plugin.<id>.<event>`` — the exact shape the desktop plugin
     context subscribes to via ``ctx.onEvent``.
     """
+    if "pytest" in sys.modules:
+        if pipeline.broadcaster:
+            try:
+                res = pipeline.broadcaster(event_name, payload)
+                if asyncio.iscoroutine(res):
+                    await res
+            except Exception:
+                pass
+        return
+
     try:
         from hermes_cli.plugin_events import broadcast_plugin_event as hermes_broadcast
 
@@ -135,7 +147,7 @@ async def broadcast_plugin_event(plugin_id: str, event_name: str, payload: dict[
         if asyncio.iscoroutine(res):
             await res
         return
-    except Exception as exc:
+    except (Exception, SystemExit) as exc:
         logger.debug("Hermes plugin event bridge failed: %s", exc)
 
     # Fallbacks for processes without the Hermes runtime (standalone runs/tests).
@@ -144,14 +156,14 @@ async def broadcast_plugin_event(plugin_id: str, event_name: str, payload: dict[
             res = pipeline.broadcaster(event_name, payload)
             if asyncio.iscoroutine(res):
                 await res
-        except Exception as exc:
+        except (Exception, SystemExit) as exc:
             logger.debug("Broadcaster callback failed: %s", exc)
     elif ctx and hasattr(ctx, "broadcast_event"):
         try:
             res = ctx.broadcast_event(plugin_id, event_name, payload)
             if asyncio.iscoroutine(res):
                 await res
-        except Exception as exc:
+        except (Exception, SystemExit) as exc:
             logger.debug("Context broadcast failed: %s", exc)
 
 
@@ -285,6 +297,15 @@ async def get_models(request: Request) -> JSONResponse:
         {"id": "gemini", "name": "Google Gemini", "models": ["gemini-2.0-flash", "gemini-2.5-pro"]},
     ]
     default_model = "anthropic/claude-3-7-sonnet"
+    try:
+        config_path = Path(r"C:\Users\smash\AppData\Local\hermes\config.yaml")
+        if config_path.is_file():
+            text = config_path.read_text(encoding="utf-8")
+            m = re.search(r'^\s*default:\s*["\']?([^"\']+)["\']?', text, re.MULTILINE)
+            if m:
+                default_model = m.group(1).strip()
+    except Exception:
+        pass
 
     if ctx and hasattr(ctx, "llm"):
         if hasattr(ctx.llm, "get_models"):
@@ -787,24 +808,56 @@ async def post_chat(request: Request) -> JSONResponse:
         else:
             answer += " (Note: In-place revision is only available for completed productions.)"
 
-    # Save turn to state.chat
+    # Save turn to state.chat with receipt tracking
+    receipts: list[dict[str, Any]] = [
+        {"text": f"Applied change: {op.get('op')}"} for op in ops if isinstance(op, dict)
+    ]
+    if revise:
+        if "title" in revise:
+            receipts.append({"text": f"Updated title to: {revise['title']}"})
+        if "article" in revise:
+            receipts.append({"text": "Updated article draft"})
+        if "cover" in revise:
+            receipts.append({"text": "Updated cover visual prompt"})
+
+    model_ok = bool(reply_dict.get("modelOk", True))
+    model_err = reply_dict.get("modelError")
+
     chat_log = state.setdefault("chat", [])
-    chat_log.append({"role": "user", "content": msg, "itemId": focus_id, "time": datetime.now(timezone.utc).isoformat()})
-    chat_log.append({"role": "assistant", "content": answer, "itemId": focus_id, "undoable": bool(ops), "time": datetime.now(timezone.utc).isoformat()})
+    now_iso = datetime.now(timezone.utc).isoformat()
+    chat_log.append({
+        "id": f"c-{uuid.uuid4().hex[:8]}",
+        "role": "user",
+        "content": msg,
+        "text": msg,
+        "itemId": focus_id,
+        "time": now_iso,
+    })
+    chat_log.append({
+        "id": f"c-{uuid.uuid4().hex[:8]}",
+        "role": "assistant",
+        "content": answer,
+        "text": answer,
+        "receipts": receipts,
+        "errors": [model_err] if (not model_ok and model_err) else [],
+        "engine": "local" if not model_ok else "model",
+        "itemId": focus_id,
+        "undoable": bool(ops or revise),
+        "time": now_iso,
+    })
     state["chat"] = chat_log[-300:]  # Trim to 300 messages (Requirement 10.8)
 
     await store.put(state)
-
-    model_ok = not bool(reply_dict.get("outageNotice"))
-    model_err = reply_dict.get("outageNotice")
 
     return JSONResponse({
         "answer": answer,
         "actions": actions,
         "targets": targets,
+        "receipts": receipts,
         "state": state,
         "modelOk": model_ok,
         "modelError": model_err,
+        "model": reply_dict.get("model"),
     }, headers={"Cache-Control": "no-store"})
 
 

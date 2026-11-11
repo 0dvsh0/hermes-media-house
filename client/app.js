@@ -594,6 +594,301 @@ function injectGlobalStyles() {
       transform: none;
       box-shadow: 0 0 0 1.5px var(--color-foreground), var(--shadow-md);
     }
+
+    /* -------------------------------------------------------------------------
+     * Assistant Chat Dock styles aligned with dsh-media-desk
+     * ---------------------------------------------------------------------- */
+    .md-chat {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background-color: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      color: var(--color-foreground);
+      overflow: hidden;
+    }
+    .md-dock-head {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--color-border);
+      background-color: color-mix(in srgb, var(--color-foreground) 2%, var(--color-card));
+    }
+    .md-dock-head h2 {
+      font-size: 13.5px;
+      line-height: 20px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--color-foreground);
+    }
+    .md-engine {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 155px;
+      min-width: 0;
+      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      font-size: 11px;
+      line-height: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--color-foreground) 5%, transparent);
+      border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+    }
+    .md-engine i {
+      flex: none;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--ui-text-quaternary, var(--color-muted));
+    }
+    .md-engine.is-live i {
+      background: var(--ui-green);
+    }
+    .md-engine.is-down i {
+      background: var(--ui-orange);
+    }
+    .md-dock-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .md-dock-intro {
+      margin: auto 0;
+      padding: 20px 8px 12px;
+      text-align: left;
+    }
+    .md-dock-intro h3 {
+      font-size: 19px;
+      line-height: 26px;
+      font-weight: 400;
+      letter-spacing: -.01em;
+      margin: 0 0 8px 0;
+      color: var(--color-foreground);
+    }
+    .md-dock-intro p {
+      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      font-size: 12px;
+      line-height: 18px;
+      margin: 0;
+    }
+    .md-msg {
+      font-size: 12.5px;
+      line-height: 19px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .md-msg.is-user {
+      align-self: flex-end;
+      max-width: 86%;
+      padding: 7px 12px;
+      border-radius: var(--radius-lg);
+      background-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 18%, var(--color-card)) !important;
+      border: 1px solid color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 45%, transparent) !important;
+      color: var(--color-foreground) !important;
+    }
+    .md-msg.is-bot {
+      align-self: flex-start;
+      max-width: 98%;
+      width: 100%;
+      padding: 2px 0;
+    }
+    .md-msg.is-bot p {
+      margin: 0;
+      color: var(--color-foreground);
+    }
+    .md-msg.is-bot p + p {
+      margin-top: 6px;
+    }
+    .md-msg-error {
+      color: var(--ui-red) !important;
+      font-size: 11.5px;
+      margin-top: 4px;
+    }
+    .md-msg-note {
+      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      font-size: 11.5px;
+      line-height: 16px;
+      margin-top: 4px;
+    }
+    .md-receipt {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      width: 100%;
+      margin-top: 6px;
+      padding: 6px 10px;
+      border-radius: var(--radius-md);
+      background-color: color-mix(in srgb, var(--color-foreground) 3%, var(--color-card));
+      border: 1px solid var(--color-border);
+      font-size: 11.5px;
+      line-height: 17px;
+      color: var(--color-foreground);
+      text-align: left;
+    }
+    button.md-receipt {
+      cursor: pointer;
+      transition: transform .15s ease, background-color .15s ease;
+    }
+    button.md-receipt:hover {
+      transform: translateX(2px);
+      background-color: color-mix(in srgb, var(--color-foreground) 6%, var(--color-card));
+    }
+    .md-receipt-check {
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 15px;
+      height: 15px;
+      margin-top: 1px;
+      border-radius: 50%;
+      background-color: var(--ui-green);
+      color: var(--color-background);
+    }
+    .md-msg footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 5px;
+      color: var(--ui-text-quaternary, var(--color-muted-foreground));
+      font-size: 11px;
+    }
+    .md-msg footer button {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: none;
+      border: none;
+      color: var(--ui-text-tertiary, var(--color-muted-foreground));
+      cursor: pointer;
+      padding: 0;
+      font-size: 11px;
+    }
+    .md-msg footer button:hover {
+      color: var(--color-foreground);
+    }
+    .md-suggest {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 0 12px 8px;
+      flex-shrink: 0;
+    }
+    .md-suggest button {
+      display: block;
+      width: 100%;
+      padding: 5px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background-color: var(--color-card);
+      color: var(--ui-text-secondary, var(--color-foreground));
+      font-size: 11.5px;
+      line-height: 17px;
+      transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      text-align: left;
+    }
+    .md-suggest button:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 12%, var(--color-card));
+      border-color: color-mix(in srgb, var(--theme-primary, var(--ui-accent, var(--ui-blue))) 45%, var(--color-border));
+      color: var(--color-foreground);
+    }
+    .md-composer {
+      position: relative;
+      margin: 0 12px 12px;
+      padding: 8px 10px;
+      border-radius: var(--radius-lg);
+      background-color: var(--color-card);
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+      transition: border-color .15s ease;
+    }
+    .md-composer:focus-within {
+      border-color: var(--theme-primary, var(--ui-accent, var(--ui-blue)));
+    }
+    .md-composer textarea {
+      flex: 1;
+      min-width: 0;
+      min-height: 22px;
+      max-height: 110px;
+      padding: 2px 0;
+      border: 0;
+      outline: 0;
+      background: none;
+      resize: none;
+      font-size: 12.5px;
+      line-height: 18px;
+      color: var(--color-foreground);
+      font-family: inherit;
+    }
+    .md-composer .md-send {
+      flex: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background-color: var(--theme-primary, var(--ui-accent, var(--ui-blue)));
+      color: var(--color-background);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity .15s ease;
+    }
+    .md-composer .md-send:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+    .md-model-alert {
+      margin-bottom: 8px;
+      padding: 8px 11px;
+      border-radius: var(--radius-md);
+      background-color: color-mix(in srgb, var(--ui-orange) 14%, var(--color-card));
+      border: 1px solid color-mix(in srgb, var(--ui-orange) 35%, transparent);
+      font-size: 11.5px;
+      line-height: 17px;
+      color: var(--color-foreground);
+    }
+    .md-model-alert strong {
+      display: block;
+      font-weight: 600;
+      color: var(--ui-orange);
+    }
+    .md-model-alert p {
+      margin: 3px 0 0 0;
+      color: var(--ui-text-secondary, var(--color-foreground));
+      overflow-wrap: anywhere;
+    }
+    .md-shimmer {
+      display: inline-block;
+      opacity: 0.7;
+      animation: md-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes md-pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
   `
   document.head.appendChild(style)
 }

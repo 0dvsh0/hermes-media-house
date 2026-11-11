@@ -1,0 +1,17 @@
+{
+  "name": "hermes-media-desk",
+  "version": "0.1.0",
+  "description": "Intelligent Content Operations & Multimedia Publishing Desk for Hermes Agent",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch"
+  },
+  "keywords": [
+    "hermes",
+    "hermes-agent",
+    "hermes-plugin",
+    "media-desk"
+  ],
+  "license": "MIT"
+}

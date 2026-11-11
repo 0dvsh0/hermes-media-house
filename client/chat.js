@@ -1,6 +1,7 @@
 /**
  * Assistant Chat Dock Component
- * Contextual chat panel with receipts, undo, and model status
+ * Fully aligned with dsh-media-desk UI/UX and Hermes theme design tokens.
+ * Provides real LLM responses, receipts, model status indicator, and reversible ops.
  */
 
 import { jsx, jsxs } from 'react/jsx-runtime'
@@ -10,34 +11,124 @@ import React, {
   useContext,
   useRef,
   useMemo,
+  useLayoutEffect,
 } from 'react'
 import { AppContext } from './app.js'
-import { GHOST_BTN, ICON_BTN } from './constants.js'
 import { Icon, IconButton } from './ui.js'
 
-// 10. Chat Dock (Task 24, Requirements 10.1-10.12)
-// ---------------------------------------------------------------------------
+const GENERAL_SUGGESTIONS = [
+  'Note: "Slow down, it still counts as arriving" can be the opening',
+  'What is on the upcoming schedule?',
+  'Keep future titles under 20 words',
+  "Turn today's best inspiration into a draft",
+]
 
-const QUICK_ACTIONS = ['studio.shorterTitle', 'studio.lighterTone', 'studio.strongerOpening', 'studio.bolderCover']
+const STUDIO_SUGGESTIONS = [
+  'Make title shorter',
+  'Make tone lighter',
+  'Write a stronger opening hook',
+  'Create bolder cover text',
+]
+
+function Receipt({ receipt, onOpenItem }) {
+  const clickable = receipt.kind === 'item' && receipt.target
+  const Tag = clickable ? 'button' : 'div'
+  return jsx(Tag, {
+    type: clickable ? 'button' : undefined,
+    className: 'md-receipt',
+    onClick: clickable && onOpenItem ? () => onOpenItem(receipt.target) : undefined,
+    children: [
+      jsx('span', {
+        className: 'md-receipt-check',
+        children: jsx(Icon, { name: 'check', size: 10, stroke: 2.2 }),
+      }),
+      jsx('span', {}, receipt.text),
+    ],
+  })
+}
+
+function Message({ message, canUndoThis, onUndo, onOpenItem }) {
+  const isUser = message.role === 'user'
+  if (isUser) {
+    return jsx('div', {
+      className: 'md-msg is-user',
+      children: message.text || message.content,
+    })
+  }
+
+  const receipts = Array.isArray(message.receipts) ? message.receipts : []
+  const errors = Array.isArray(message.errors) ? message.errors : []
+
+  return jsxs('div', {
+    className: 'md-msg is-bot',
+    children: [
+      jsx('p', {}, message.text || message.content),
+      receipts.map((r, idx) => jsx(Receipt, { key: `rcpt-${idx}`, receipt: r, onOpenItem })),
+      errors.map((err, idx) => jsx('p', { key: `err-${idx}`, className: 'md-msg-error' }, err)),
+      message.notice ? jsx('p', { className: 'md-msg-note' }, message.notice) : null,
+      jsxs('footer', {
+        children: [
+          jsx('span', {}, message.engine === 'local' ? 'Local Rules' : ''),
+          canUndoThis
+            ? jsxs('button', {
+                type: 'button',
+                onClick: onUndo,
+                children: [
+                  jsx(Icon, { name: 'undo', size: 11 }),
+                  jsx('span', {}, 'Undo'),
+                ],
+              })
+            : null,
+        ],
+      }),
+    ],
+  })
+}
+
+function ModelAlert({ model, error }) {
+  if (!error) return null
+  return jsxs('div', {
+    className: 'md-model-alert',
+    role: 'status',
+    children: [
+      jsx('strong', {}, `Model ${model || 'LLM'} call failed`),
+      jsx('p', {}, error.length > 280 ? `${error.slice(0, 280)}...` : error),
+    ],
+  })
+}
 
 export function ChatDock({ itemId, onClose, initialInput, onClearSeed }) {
   const { state, dispatch, rest, t } = useContext(AppContext)
   const [inputMsg, setInputMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const [chatError, setChatError] = useState('')
-  const [outageNotice, setOutageNotice] = useState('')
+  const [model, setModel] = useState('stepfun/step-3.7-flash:free')
+  const [modelOk, setModelOk] = useState(true)
+  const [modelError, setModelError] = useState(null)
   const scrollRef = useRef(null)
+  const textareaRef = useRef(null)
 
   const focusId = itemId || state.openItemId
   const allChat = (state.serverState && state.serverState.chat) || []
 
-  // Scoped to focusId and limited to last 8 messages (Requirements 10.12, 24).
+  // Scoped to focusId and limited to last 30 messages
   const scopedChat = useMemo(() => {
     const list = focusId ? allChat.filter(m => m.itemId === focusId) : allChat
-    return list.slice(-8)
+    return list.slice(-30)
   }, [allChat, focusId])
 
-  // Adopt selection seeds handed down from the Studio tiles.
+  // Fetch initial model metadata on mount
+  useEffect(() => {
+    rest('/models')
+      .then(res => {
+        if (res && res.default) {
+          setModel(res.default)
+        }
+      })
+      .catch(() => {})
+  }, [rest])
+
+  // Adopt selection seeds handed down from the Studio tiles
   useEffect(() => {
     if (initialInput) {
       setInputMsg(initialInput)
@@ -45,32 +136,56 @@ export function ChatDock({ itemId, onClose, initialInput, onClearSeed }) {
     }
   }, [initialInput, onClearSeed])
 
+  // Scroll to bottom on new messages
   useEffect(() => {
     const el = scrollRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [scopedChat.length])
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    }
+  }, [scopedChat.length, loading])
+
+  // Auto-resize composer textarea
+  useLayoutEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+  }, [inputMsg])
 
   const handleSend = raw => {
     const msg = (typeof raw === 'string' ? raw : inputMsg).trim()
     if (!msg || loading) return
     setLoading(true)
     setChatError('')
-    setOutageNotice('')
     setInputMsg('')
+
     rest('/chat', {
       method: 'POST',
       body: JSON.stringify({ message: msg, focusId }),
     })
       .then(res => {
         setLoading(false)
-        if (res && res.state) dispatch({ type: 'SET_STATE', payload: res.state })
-        if (res && res.modelOk === false && res.modelError) {
-          setOutageNotice(res.modelError)
+        if (res && res.state) {
+          dispatch({ type: 'SET_STATE', payload: res.state })
+        }
+        if (res && res.model) {
+          setModel(res.model)
+        }
+        if (res && typeof res.modelOk === 'boolean') {
+          setModelOk(res.modelOk)
+        }
+        if (res && res.modelError) {
+          setModelError(res.modelError)
+        } else if (res && res.modelOk) {
+          setModelError(null)
         }
       })
       .catch(err => {
         setLoading(false)
-        setChatError(err.message || String(err))
+        const errMsg = err.message || String(err)
+        setChatError(errMsg)
+        setModelOk(false)
+        setModelError(errMsg)
       })
   }
 
@@ -94,265 +209,161 @@ export function ChatDock({ itemId, onClose, initialInput, onClearSeed }) {
       })
   }
 
-  const dockBtn = {
-    padding: '3px 8px',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--color-border)',
-    backgroundColor: 'var(--color-card)',
-    color: 'var(--ui-text-tertiary)',
-    cursor: 'pointer',
-    fontSize: '11px',
-    fontWeight: 500,
-    whiteSpace: 'nowrap',
+  const handleOpenItem = targetId => {
+    if (targetId) {
+      dispatch({ type: 'OPEN_STUDIO', payload: targetId })
+    }
   }
 
+  const lastBot = [...scopedChat].reverse().find(m => m.role === 'assistant')
+  const suggestions = focusId ? STUDIO_SUGGESTIONS : GENERAL_SUGGESTIONS
+
   return jsxs('div', {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100%',
-      height: '100%',
-      boxSizing: 'border-box',
-      backgroundColor: 'var(--color-card)',
-      border: '1px solid var(--color-border)',
-      borderRadius: 'var(--radius-xl)',
-      color: 'var(--color-foreground)',
-      overflow: 'hidden',
-    },
+    className: 'md-chat',
     children: [
-      jsxs('div', {
-        style: {
-          padding: '10px 12px',
-          borderBottom: '1px solid var(--color-border)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexShrink: 0,
-        },
+      // Dock Header
+      jsxs('header', {
+        className: 'md-dock-head',
         children: [
-          jsx('span', {
-            style: { fontWeight: 600, fontSize: '12.5px' },
-            children: t('chat.title'),
-          }),
-          jsxs('button', {
-            type: 'button',
-            onClick: handleClear,
-            style: { ...dockBtn, display: 'inline-flex', alignItems: 'center', gap: '4px' },
-            children: [
-              jsx(Icon, { name: 'trash', size: 12 }),
-              jsx('span', {}, t('chat.clear')),
-            ],
-          }),
+          jsx('h2', {}, t('chat.title') || 'Assistant'),
+          jsx(
+            'span',
+            {
+              className: `md-engine ${modelOk === false ? 'is-down' : 'is-live'}`,
+              title:
+                modelOk === false
+                  ? `Model call failed: ${modelError || 'Error'}`
+                  : `Active Hermes Model: ${model}`,
+            },
+            [
+              jsx('i', { key: 'engine-dot' }),
+              jsx('span', { key: 'engine-name' }, modelOk === false ? 'Model Error' : model),
+            ]
+          ),
+          jsx('span', { style: { flex: 1 } }),
+          scopedChat.length > 0
+            ? jsx(IconButton, {
+                icon: 'trash',
+                label: t('chat.clear') || 'Clear Chat',
+                onClick: handleClear,
+              })
+            : null,
+          onClose
+            ? jsx(IconButton, {
+                icon: 'close',
+                label: t('common.close') || 'Close',
+                onClick: onClose,
+              })
+            : null,
         ],
       }),
-      onClose
-        ? jsx('div', {
-            style: { display: 'flex', justifyContent: 'flex-end', padding: '4px 8px 0' },
-            children: jsx('button', {
-              type: 'button',
-              onClick: onClose,
-              'aria-label': t('common.cancel'),
-              style: {
-                border: 'none',
-                background: 'none',
-                color: 'var(--ui-text-quaternary)',
-                cursor: 'pointer',
-                padding: '2px',
-                display: 'inline-flex',
-                alignItems: 'center',
-              },
-              children: jsx(Icon, { name: 'close', size: 13 }),
-            }),
-          })
-        : null,
-      outageNotice
-        ? jsx('div', {
-            style: {
-              margin: '8px 12px 0',
-              padding: '6px 10px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor:
-                'color-mix(in srgb, var(--ui-orange) 10%, var(--color-background))',
-              color: 'var(--ui-text-secondary)',
-              fontSize: '11.5px',
-            },
-            children: `${t('chat.outage')}: ${outageNotice}`,
-          })
-        : null,
-      chatError
-        ? jsx('div', {
-            style: {
-              margin: '8px 12px 0',
-              padding: '6px 10px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'color-mix(in srgb, var(--ui-red) 10%, var(--color-background))',
-              color: 'var(--ui-red)',
-              fontSize: '11.5px',
-            },
-            children: chatError,
-          })
-        : null,
-      jsx('div', {
-        ref: scrollRef,
-        style: {
-          flex: 1,
-          overflowY: 'auto',
-          padding: '12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          minHeight: 0,
-        },
-        children:
-          scopedChat.length === 0
-            ? jsx('div', {
-                style: {
-                  textAlign: 'center',
-                  color: 'var(--ui-text-quaternary)',
-                  fontSize: '12px',
-                  marginTop: '24px',
-                },
-                children: t('chat.empty'),
-              })
-            : scopedChat.map((m, idx) => {
-                const isUser = m.role === 'user'
-                return jsxs(
-                  'div',
-                  {
-                    style: {
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isUser ? 'flex-end' : 'flex-start',
-                      gap: '2px',
-                      maxWidth: '100%',
-                    },
-                    children: [
-                      jsx('div', {
-                        style: {
-                          maxWidth: '88%',
-                          padding: '7px 11px',
-                          borderRadius: 'var(--radius-lg)',
-                          backgroundColor: isUser
-                            ? 'var(--color-foreground)'
-                            : 'color-mix(in srgb, var(--color-foreground) 5%, var(--color-background))',
-                          border: isUser
-                            ? 'none'
-                            : '1px solid color-mix(in srgb, var(--color-border) 60%, transparent)',
-                          color: isUser ? 'var(--color-background)' : 'var(--color-foreground)',
-                          fontSize: '12.5px',
-                          lineHeight: 1.5,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                        },
-                        children: m.content,
-                      }),
-                      !isUser && m.undoable
-                        ? jsxs('button', {
-                            type: 'button',
-                            onClick: handleUndo,
-                            style: { ...dockBtn, marginTop: '2px', display: 'inline-flex', alignItems: 'center', gap: '4px' },
-                            children: [
-                              jsx(Icon, { name: 'undo', size: 11 }),
-                              jsx('span', {}, t('chat.undo')),
-                            ],
-                          })
-                        : null,
-                    ],
-                  },
-                  `chat-msg-${idx}`
-                )
-              }),
-      }),
-      // Quick edit suggestions (studio context only).
-      focusId
-        ? jsx('div', {
-            style: {
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: '2px',
-              padding: '0 12px',
-              flexShrink: 0,
-            },
-            children: QUICK_ACTIONS.map(key =>
-              jsx(
-                'button',
-                {
-                  key,
-                  type: 'button',
-                  onClick: () => handleSend(t(key)),
-                  style: {
-                    border: 'none',
-                    background: 'none',
-                    color: 'var(--ui-text-quaternary)',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    padding: '2px 0',
-                    textAlign: 'left',
-                  },
-                  children: t(key),
-                },
-                key
-              )
-            ),
-          })
-        : null,
+
+      // Scrollable Message History
       jsxs('div', {
-        style: {
-          padding: '10px 12px',
-          borderTop: '1px solid var(--color-border)',
-          display: 'flex',
-          gap: '8px',
-          alignItems: 'center',
-          flexShrink: 0,
+        ref: scrollRef,
+        className: 'md-dock-scroll',
+        'aria-live': 'polite',
+        children: [
+          modelOk === false && modelError
+            ? jsx(ModelAlert, { model, error: modelError })
+            : null,
+          chatError
+            ? jsx('div', { className: 'md-msg-error' }, chatError)
+            : null,
+          scopedChat.length === 0
+            ? jsxs('div', {
+                className: 'md-dock-intro',
+                children: [
+                  jsxs('h3', {
+                    children: [
+                      'Say one thing,',
+                      jsx('br', {}),
+                      "I'll fill in the rest.",
+                    ],
+                  }),
+                  jsx(
+                    'p',
+                    {},
+                    'Topics, ideas, content, schedule, style, and writing rules can all be instructed directly. Every step can be undone.'
+                  ),
+                ],
+              })
+            : scopedChat.map((msg, idx) =>
+                jsx(
+                  Message,
+                  {
+                    message: msg,
+                    canUndoThis: msg === lastBot && Boolean(msg.undoable),
+                    onUndo: handleUndo,
+                    onOpenItem: handleOpenItem,
+                  },
+                  msg.id || `msg-${idx}`
+                )
+              ),
+          loading
+            ? jsx('div', {
+                className: 'md-msg is-bot',
+                children: jsx('span', { className: 'md-shimmer' }, 'Thinking and writing with Hermes...'),
+              })
+            : null,
+        ],
+      }),
+
+      // Suggestion Chips
+      jsx('div', {
+        className: 'md-suggest',
+        children: suggestions.slice(0, scopedChat.length ? 2 : 4).map(text =>
+          jsx(
+            'button',
+            {
+              key: text,
+              type: 'button',
+              onClick: () => handleSend(text),
+              disabled: loading,
+            },
+            text
+          )
+        ),
+      }),
+
+      // Composer Area
+      jsxs('form', {
+        className: 'md-composer',
+        onSubmit: e => {
+          e.preventDefault()
+          handleSend()
         },
         children: [
-          jsx('input', {
-            type: 'text',
-            placeholder: t('chat.placeholder'),
+          jsx('textarea', {
+            ref: textareaRef,
+            rows: 1,
+            'aria-label': 'Message the Assistant',
+            placeholder: focusId
+              ? 'Refine title, tone, hook, or content...'
+              : 'Instruct anything, or ask to revise...',
             value: inputMsg,
+            disabled: loading,
             onChange: e => setInputMsg(e.target.value),
             onKeyDown: e => {
-              if (e.key === 'Enter') handleSend()
-            },
-            style: {
-              flex: 1,
-              minWidth: 0,
-              padding: '7px 11px',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              backgroundColor: 'color-mix(in srgb, var(--color-foreground) 4%, var(--color-background))',
-              color: 'var(--color-foreground)',
-              fontSize: '12.5px',
-              outline: 'none',
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
             },
           }),
           jsx('button', {
-            type: 'button',
-            onClick: () => handleSend(),
-            disabled: loading || !inputMsg.trim(),
-            style: {
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              border: 'none',
-              backgroundColor:
-                loading || !inputMsg.trim() ? 'var(--color-border)' : 'var(--color-foreground)',
-              color: 'var(--color-background)',
-              cursor: loading || !inputMsg.trim() ? 'default' : 'pointer',
-              fontWeight: 700,
-              fontSize: '13px',
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            },
-            children: jsx(Icon, { name: loading ? 'refresh' : 'send', size: 13, spinning: loading }),
+            type: 'submit',
+            className: 'md-send',
+            'aria-label': 'Send',
+            disabled: !inputMsg.trim() || loading,
+            children: jsx(Icon, {
+              name: loading ? 'refresh' : 'send',
+              size: 13,
+              spinning: loading,
+            }),
           }),
         ],
       }),
     ],
   })
 }
-
-// ---------------------------------------------------------------------------

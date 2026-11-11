@@ -76,6 +76,98 @@ def llm_kwargs(settings: dict | None) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
+# LLM Resolver & Invoker (Host-owned Hermes Agent PluginLlm + Mock Fallbacks)
+# ---------------------------------------------------------------------------
+
+_cached_llm: Any = None
+
+
+def get_llm(ctx: Any = None) -> Any:
+    """Return ctx.llm if provided, otherwise lazily resolve host Hermes PluginLlm."""
+    global _cached_llm
+    if ctx is not None and getattr(ctx, "llm", None) is not None:
+        return ctx.llm
+    if _cached_llm is not None:
+        return _cached_llm
+    try:
+        import sys
+        hermes_root = r"C:\Users\smash\AppData\Local\hermes\hermes-agent"
+        if hermes_root not in sys.path:
+            sys.path.insert(0, hermes_root)
+        from agent.plugin_llm import PluginLlm  # type: ignore
+        _cached_llm = PluginLlm(plugin_id="hermes-media-desk")
+        return _cached_llm
+    except Exception as exc:
+        logger.warning("Could not initialize host PluginLlm: %s", exc)
+        return None
+
+
+async def _call_llm(
+    llm: Any,
+    prompt: str,
+    system: str | None = None,
+    history: list | None = None,
+    light: bool = True,
+    purpose: str = "content-creation",
+    task: str = "general",
+    timeout: int = 240_000,
+    **kwargs: Any,
+) -> str:
+    """Universal caller supporting both Hermes PluginLlm and mocked ctx.llm."""
+    messages: list[dict[str, Any]] = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    if history:
+        for h in history:
+            role = h.get("role", "user")
+            content = h.get("content") or h.get("text") or ""
+            if role in ("user", "assistant") and content:
+                messages.append({"role": role, "content": str(content)})
+    messages.append({"role": "user", "content": prompt})
+
+    is_plugin_llm = False
+    try:
+        from agent.plugin_llm import PluginLlm
+        if isinstance(llm, PluginLlm):
+            is_plugin_llm = True
+    except Exception:
+        pass
+    if not is_plugin_llm and type(llm).__name__ == "PluginLlm":
+        is_plugin_llm = True
+
+    if is_plugin_llm:
+        call_kw: dict[str, Any] = {}
+        for k in ("provider", "model", "temperature", "max_tokens", "agent_id", "profile", "purpose"):
+            if k in kwargs and kwargs[k] is not None:
+                call_kw[k] = kwargs[k]
+        if "timeout" in kwargs and kwargs["timeout"] is not None:
+            call_kw["timeout"] = float(kwargs["timeout"])
+        else:
+            call_kw["timeout"] = float(timeout) / 1000.0 if timeout > 1000 else float(timeout)
+        if "purpose" not in call_kw:
+            call_kw["purpose"] = purpose
+
+        res = await llm.acomplete(messages, **call_kw)
+        return res.text if hasattr(res, "text") else str(res)
+
+    # Legacy/mock interface (e.g. MagicMock in unit tests)
+    try:
+        res = await llm.acomplete(
+            prompt=prompt,
+            system=system,
+            light=light,
+            purpose=purpose,
+            task=task,
+            timeout=timeout,
+            **kwargs,
+        )
+        return res.text if hasattr(res, "text") else str(res)
+    except TypeError:
+        res = await llm.acomplete(messages)
+        return res.text if hasattr(res, "text") else str(res)
+
+
+# ---------------------------------------------------------------------------
 # Fallback and Rule-Based Helpers (Requirements 10.2, 22.6)
 # ---------------------------------------------------------------------------
 
@@ -184,9 +276,15 @@ async def generate_plan(
     item: dict,
     style: dict | None,
     skills: list,
-    settings: dict | None = None,
+    settings: dict | str | None = None,
+    lang: str = "en",
+    **extra: Any,
 ) -> dict:
     """Generate a structured content plan using LLM (light=True, timeout=240s)."""
+    if isinstance(settings, str):
+        lang = settings
+        settings = None
+
     rules_block = build_skills_block(skills)
     voice_block = build_voice_block(style)
     blocks = [b for b in (rules_block, voice_block) if b]
@@ -203,12 +301,14 @@ async def generate_plan(
         f"Create a plan for item:\nTitle: {item.get('title')}\nBody: {item.get('body')}\nPlatform: {item.get('platform')}"
     )
 
-    if ctx is None or not hasattr(ctx, "llm") or ctx.llm is None:
+    llm = get_llm(ctx)
+    if llm is None:
         return fallback_plan(item)
 
     kwargs = llm_kwargs(settings)
     try:
-        resp = await ctx.llm.acomplete(
+        resp = await _call_llm(
+            llm=llm,
             prompt=user_prompt,
             system=sys_prompt,
             light=True,
@@ -232,9 +332,15 @@ async def generate_article(
     item: dict,
     style: dict | None,
     skills: list,
-    settings: dict | None = None,
+    settings: dict | str | None = None,
+    lang: str = "en",
+    **extra: Any,
 ) -> str:
     """Generate article body text using LLM (light=False, timeout=240s)."""
+    if isinstance(settings, str):
+        lang = settings
+        settings = None
+
     rules_block = build_skills_block(skills)
     voice_block = build_voice_block(style)
     blocks = [b for b in (rules_block, voice_block) if b]
@@ -250,12 +356,14 @@ async def generate_article(
         f"Outline: {plan.get('outline')}\nFacts: {plan.get('facts')}"
     )
 
-    if ctx is None or not hasattr(ctx, "llm") or ctx.llm is None:
+    llm = get_llm(ctx)
+    if llm is None:
         return f"# {plan.get('title', item.get('title'))}\n\n{item.get('body', '')}"
 
     kwargs = llm_kwargs(settings)
     try:
-        resp = await ctx.llm.acomplete(
+        resp = await _call_llm(
+            llm=llm,
             prompt=user_prompt,
             system=sys_prompt,
             light=False,
@@ -277,9 +385,15 @@ async def chat_reply(
     item: dict,
     production: dict | None,
     style: dict | None,
-    settings: dict | None = None,
+    settings: dict | str | None = None,
+    lang: str = "en",
+    **extra: Any,
 ) -> dict:
     """Process user chat revision instruction with LLM (light=True, task='chat-reply')."""
+    if isinstance(settings, str):
+        lang = settings
+        settings = None
+
     rules_block = build_skills_block(style.get("skills", []) if style else [])
     voice_block = build_voice_block(style)
     blocks = [b for b in (rules_block, voice_block) if b]
@@ -305,18 +419,22 @@ async def chat_reply(
         f"User message: {message}"
     )
 
-    if ctx is None or not hasattr(ctx, "llm") or ctx.llm is None:
+    llm = get_llm(ctx)
+    if llm is None:
         fallback = local_intent(message, item, production)
-        return {**fallback, "modelOk": False, "modelError": "LLM client not available"}
+        return {**fallback, "modelOk": False, "modelError": "Hermes Agent LLM service is not available."}
 
     kwargs = llm_kwargs(settings)
     try:
-        resp = await ctx.llm.acomplete(
+        resp = await _call_llm(
+            llm=llm,
             prompt=user_prompt,
             system=sys_prompt,
+            history=history,
             light=True,
             purpose="content-creation",
             task="chat-reply",
+            timeout=120_000,
             **kwargs,
         )
         parsed = _extract_json_block(resp)
@@ -330,18 +448,30 @@ async def chat_reply(
                 "modelOk": True,
                 "modelError": None,
             }
-        # Non-JSON or missing fields -> fallback to local intent
+        # If response was plain text from a real LLM without all JSON keys, use the real reply!
+        clean_text = resp.strip() if isinstance(resp, str) else str(resp)
+        if clean_text:
+            return {
+                "reply": clean_text,
+                "ops": [],
+                "revise": {},
+                "actions": [],
+                "modelOk": True,
+                "modelError": None,
+            }
         fallback = local_intent(message, item, production)
-        return {**fallback, "modelOk": False, "modelError": "LLM response did not contain required JSON fields"}
+        return {**fallback, "modelOk": False, "modelError": "Empty response from Hermes model"}
     except Exception as exc:
+        logger.warning("chat_reply LLM call failed (%s)", exc)
         fallback = local_intent(message, item, production)
-        return {**fallback, "modelOk": False, "modelError": str(exc)}
+        return {**fallback, "reply": f"Model error: {exc}", "modelOk": False, "modelError": str(exc)}
 
 
 async def extract_style(
     ctx: Any,
     text: str,
     settings: dict | None = None,
+    **extra: Any,
 ) -> dict:
     """Analyze sample writing text and return a structured StyleCard profile."""
     sys_prompt = (
@@ -358,7 +488,8 @@ async def extract_style(
         "}"
     )
 
-    if ctx is None or not hasattr(ctx, "llm") or ctx.llm is None:
+    llm = get_llm(ctx)
+    if llm is None:
         return {
             "name": "Extracted Voice",
             "tone": "Direct, engaging, authentic",
@@ -372,27 +503,14 @@ async def extract_style(
 
     kwargs = llm_kwargs(settings)
     try:
-        # Check if structured completion is available and genuinely callable/async
-        if hasattr(ctx.llm, "acomplete_structured"):
-            try:
-                result = await ctx.llm.acomplete_structured(
-                    prompt=f"Text to analyze:\n\n{text}",
-                    system=sys_prompt,
-                    schema={
-                        "name": str, "tone": str, "sentences": str, "opening": str,
-                        "structure": str, "words": list, "avoid": list, "samples": str,
-                    },
-                    **kwargs,
-                )
-                if isinstance(result, dict) and "name" in result:
-                    return result
-            except (TypeError, AttributeError):
-                pass  # Fall back to standard acomplete
-
-        resp = await ctx.llm.acomplete(
+        resp = await _call_llm(
+            llm=llm,
             prompt=f"Analyze style of this text:\n\n{text}",
             system=sys_prompt,
             light=False,
+            purpose="content-creation",
+            task="extract-style",
+            timeout=180_000,
             **kwargs,
         )
         parsed = _extract_json_block(resp)
