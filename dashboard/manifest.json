@@ -1,0 +1,8 @@
+{
+  "id": "hermes-media-desk",
+  "name": "hermes-media-desk",
+  "description": "Social-media content workbench with AI-powered production pipeline.",
+  "version": "0.1.0",
+  "api": "plugin_api.py",
+  "mount": "/api/plugins/hermes-media-desk/"
+}

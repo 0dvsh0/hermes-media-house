@@ -1,0 +1,13 @@
+id: hermes-media-desk
+name: Media Desk
+description: >
+  Social-media content workbench — full-screen five-page UI with one-click AI
+  production, in-studio chat revision, Monid social import, and real content workflows.
+version: "0.1.0"
+defaultEnabled: true
+mount: /api/plugins/hermes-media-desk/
+
+config_schema:
+  image.apiKey:
+    type: secret
+    description: API key for the OpenAI-compatible image generation endpoint.
