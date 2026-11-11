@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing & coverage
+.hypothesis/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments & OS
+.env
+.env.*
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE & Editor
+.vscode/
+.idea/
+
+# Local build / scratch artifacts
+scratch/
+node_modules/
+npm-debug.log*
