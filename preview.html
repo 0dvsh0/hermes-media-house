@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hermes Media Desk UI Preview</title>
+  <style>
+    :root {
+      --ui-background: #ffffff;
+      --ui-foreground: #0f172a;
+      --ui-card: #ffffff;
+      --ui-card-foreground: #0f172a;
+      --ui-primary: #0f172a;
+      --ui-primary-foreground: #ffffff;
+      --ui-muted: #f1f5f9;
+      --ui-muted-foreground: #64748b;
+      --ui-border: #e2e8f0;
+      --ui-destructive: #ef4444;
+      --ui-destructive-foreground: #ffffff;
+      --ui-radius-sm: 6px;
+      --ui-radius-md: 12px;
+      --ui-radius-lg: 16px;
+      --ui-font-xs: 12px;
+      --ui-font-sm: 13px;
+      --ui-font-base: 14px;
+      --ui-font-lg: 18px;
+      --ui-font-xl: 24px;
+      --ui-font-2xl: 32px;
+      --ui-space-xs: 4px;
+      --ui-space-sm: 8px;
+      --ui-space-md: 16px;
+      --ui-space-lg: 24px;
+      --ui-space-xl: 32px;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--ui-background);
+      color: var(--ui-foreground);
+    }
+    #root {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+  <script>
+    window.onerror = function(msg, url, line, col, err) {
+      document.body.innerHTML += '<div style="color:red;font-size:18px;padding:20px;z-index:9999;position:relative;">ERROR: ' + msg + ' (' + url + ':' + line + ')</div>';
+    };
+    window.addEventListener('unhandledrejection', function(event) {
+      document.body.innerHTML += '<div style="color:red;font-size:18px;padding:20px;z-index:9999;position:relative;">UNHANDLED: ' + (event.reason ? event.reason.stack || event.reason : 'unknown') + '</div>';
+    });
+  </script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "@hermes/plugin-sdk": "data:text/javascript,export const ROUTES_AREA='routes';export const SIDEBAR_NAV_AREA='sidebar-nav';"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { jsx, jsxs } from 'react/jsx-runtime';
+    import plugin, { AppRoot, ZH_BUNDLE, EN_BUNDLE } from '/desktop/plugin.js';
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const initialView = params.get('view') || 'home';
+      const openItem = params.get('item') || null;
+      const lang = params.get('lang') || 'en';
+      const bundle = lang === 'zh' ? ZH_BUNDLE : EN_BUNDLE;
+
+      const ctx = {
+        storage: {
+          get: (k) => {
+            if (k === 'activeView') return initialView;
+            if (k === 'openItemId') return openItem;
+            return null;
+          },
+          set: () => {}
+        },
+        i18n: {
+          register: () => {},
+          locale: lang,
+          t: (k) => bundle[k] || EN_BUNDLE[k] || ZH_BUNDLE[k] || k
+        },
+        rest: async (path, opts = {}) => {
+          const res = await fetch(path, {
+            ...opts,
+            headers: {
+              'content-type': 'application/json',
+              'x-media-desk-lang': lang,
+              'sec-fetch-site': 'same-origin',
+              ...(opts.headers || {})
+            }
+          });
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        }
+      };
+
+      const t = (k) => ctx.i18n.t(k);
+      const locale = () => lang;
+      const rest = ctx.rest;
+
+      const root = createRoot(document.getElementById('root'));
+      root.render(jsx(AppRoot, { ctx, rest, t, locale }));
+    } catch (e) {
+      document.body.innerHTML += '<div style="color:red;font-size:18px;padding:20px;">MODULE ERROR: ' + e.stack + '</div>';
+    }
+  </script>
+</body>
+</html>
